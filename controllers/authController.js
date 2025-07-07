@@ -1,5 +1,4 @@
 import User from "../models/user.js";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import user from "../models/user.js";
 
@@ -11,12 +10,10 @@ export const registerUser = async (req, res) => {
     if (existingUser)
       return res.status(400).json({ msg: "User already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const newUser = await User.create({
       username,
       email,
-      password: hashedPassword,
+      password,
     });
 
     return res.status(201).json({
@@ -41,7 +38,7 @@ export const loginUser = async (req, res) => {
         message: "User not found in the database",
       });
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = password === user.password;
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
@@ -79,10 +76,10 @@ export const updateProfileSettings = async (req, res) => {
     const { username, email } = req.body;
 
     const user = await user.findById(req.params.userId);
-    if(user._id!== req.user.id){
+    if (user._id !== req.user.id) {
       return res.status(403).json({
-        error:"Unauthorized"
-      })
+        error: "Unauthorized",
+      });
     }
 
     const updatedUser = await user
@@ -101,11 +98,10 @@ export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user_ = await user.findById(req.params.userId);
-    const isMatch = await bcrypt.compare(currentPassword, user_.password);
+    const isMatch = currentPassword===user_.password
     if (!isMatch) return res.status(400).json({ error: "Incorrect Password" });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
-    user_.password = hashed;
+    user_.password = newPassword;
     await user_.save();
     return res.json({ success: true });
   } catch (error) {
